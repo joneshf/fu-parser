@@ -279,9 +279,9 @@ const importFultimatorPC = async (data: Player) => {
 				type: "spell" as const,
 				name: pcSpell.name != "" ? pcSpell.name : "Unnamed Spell",
 				system: {
-					mpCost: { value: pcSpell.mp.toString() },
-					maxTargets: { value: pcSpell.maxTargets.toString() },
-					target: { value: pcSpell.targetDesc.toString() },
+					mpCost: { value: pcSpell.mp.toString() || "" },
+					maxTargets: { value: pcSpell.maxTargets.toString() || "" },
+					target: { value: pcSpell.targetDesc.toString() || "" },
 					duration: { value: pcSpell.duration },
 					isOffensive: { value: pcSpell.isOffensive == true },
 					hasRoll: { value: pcSpell.isOffensive == true },
@@ -667,9 +667,10 @@ const importFultimatorNPC = async (data: Npc) => {
 			type: "spell" as const,
 			name: spell.name != "" ? spell.name : "Unnamed Spell",
 			system: {
-				mpCost: { value: spell.mp },
-				target: { value: spell.target },
-				duration: { value: spell.duration },
+				mpCost: { value: spell.mp || "" },
+				maxTargets: { value: spell.maxTargets.toString() || "" },
+				target: { value: spell.target || "" },
+				duration: { value: spell.duration || "" },
 				isOffensive: { value: spell.type == "offensive" },
 				hasRoll: { value: spell.type == "offensive" },
 				rollInfo:
