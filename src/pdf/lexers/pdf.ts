@@ -7,6 +7,13 @@ export const tokenizePDF = async (
 ): Promise<
 	[<R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>, () => Promise<void>]
 > => {
+	parameters.cMapPacked ??= true;
+	if (typeof window !== "undefined" && window?.document != null) {
+		parameters.cMapUrl ??= `//cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/cmaps/`;
+	} else {
+		parameters.cMapUrl ??= "node_modules/pdfjs-dist/cmaps/";
+	}
+
 	const doc = await pdfjsLib.getDocument(parameters).promise;
 
 	return [
