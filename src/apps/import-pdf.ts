@@ -6,7 +6,7 @@ import { Armor, armorPage } from "../pdf/parsers/armorPage";
 import { Shield, shieldPage } from "../pdf/parsers/shieldPage";
 import { Accessory, accessories } from "../pdf/parsers/accessoryPage";
 import { Beast, beastiary } from "../pdf/parsers/beastiaryPage";
-import { StringToken } from "../pdf/lexers/token";
+import { StringToken, Token } from "../pdf/lexers/token";
 import { tokenizePDF } from "../pdf/lexers/pdf";
 import { ATTR, FUActor, FUItem, getFolder, saveImage } from "../external/project-fu";
 
@@ -21,10 +21,9 @@ for (const prop of ["deepFlatten", "equals", "partition", "filterJoin", "findSpl
 	});
 }
 
-type Wrapper = <T extends { name: string }>(
-	p: Parser<T[]>,
-	s: (t: T[], pn: number, f: readonly string[], imagePath: string) => Promise<void>,
-) => Promise<ParseResult>;
+type SaveFunction<T> = (t: T[], pn: number, f: readonly string[], imagePath: string) => Promise<void>;
+
+type Wrapper = <T extends { name: string }>(p: Parser<T[]>, s: SaveFunction<T>) => Promise<ParseResult>;
 
 const AFF_MAPPING: Record<Affinity, number> = {
 	VU: -1,
@@ -40,7 +39,7 @@ const STAT_MAPPING: Record<Stat, ATTR> = {
 	INS: "ins",
 	WLP: "wlp",
 };
-const saveConsumables = async (
+const saveConsumables: SaveFunction<Consumable> = async (
 	consumables: Consumable[],
 	pageNum: number,
 	folderNames: readonly string[],
@@ -66,7 +65,12 @@ const saveConsumables = async (
 	}
 };
 
-const saveWeapons = async (weapons: Weapon[], pageNum: number, folderNames: readonly string[], imagePath: string) => {
+const saveWeapons: SaveFunction<Weapon> = async (
+	weapons: Weapon[],
+	pageNum: number,
+	folderNames: readonly string[],
+	imagePath: string,
+) => {
 	const folder = await getFolder(folderNames, "Item");
 	if (folder) {
 		for (const data of weapons) {
@@ -103,7 +107,12 @@ const saveWeapons = async (weapons: Weapon[], pageNum: number, folderNames: read
 	}
 };
 
-const saveArmors = async (armors: Armor[], pageNum: number, folderNames: readonly string[], imagePath: string) => {
+const saveArmors: SaveFunction<Armor> = async (
+	armors: Armor[],
+	pageNum: number,
+	folderNames: readonly string[],
+	imagePath: string,
+) => {
 	const folder = await getFolder(folderNames, "Item");
 	if (folder) {
 		for (const data of armors) {
@@ -130,7 +139,7 @@ const saveArmors = async (armors: Armor[], pageNum: number, folderNames: readonl
 	}
 };
 
-const saveAccessories = async (
+const saveAccessories: SaveFunction<Accessory> = async (
 	accessories: Accessory[],
 	pageNum: number,
 	folderNames: readonly string[],
@@ -162,7 +171,12 @@ const saveAccessories = async (
 	}
 };
 
-const saveShields = async (shields: Shield[], pageNum: number, folderNames: readonly string[], imagePath: string) => {
+const saveShields: SaveFunction<Shield> = async (
+	shields: Shield[],
+	pageNum: number,
+	folderNames: readonly string[],
+	imagePath: string,
+) => {
 	const folder = await getFolder(folderNames, "Item");
 	if (folder) {
 		for (const data of shields) {
@@ -189,7 +203,12 @@ const saveShields = async (shields: Shield[], pageNum: number, folderNames: read
 	}
 };
 
-const saveBeasts = async (beasts: Beast[], pageNum: number, folderNames: readonly string[], imagePath: string) => {
+const saveBeasts: SaveFunction<Beast> = async (
+	beasts: Beast[],
+	pageNum: number,
+	folderNames: readonly string[],
+	imagePath: string,
+) => {
 	for (const b of beasts) {
 		const folder = await getFolder([...folderNames, b.type], "Actor");
 		if (folder) {
@@ -476,8 +495,32 @@ const PAGES = {
 	355: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
 } as const;
 
+type ParseResultWithoutCleanup =
+	| {
+			type: "success";
+			page: number;
+			results: { name: string }[];
+			save: (imagePath: string) => Promise<void>;
+	  }
+	| {
+			type: "failure";
+			errors: { found: string; error: string; distance: number }[];
+			page: number;
+	  }
+	| {
+			type: "too many";
+			count: number;
+			errors: { found: string; error: string; distance: number }[];
+			page: number;
+	  };
+
 type ParseResult = { page: number } & (
-	| { type: "success"; save: (imagePath: string) => Promise<void>; cleanup: () => boolean }
+	| {
+			type: "success";
+			results: { name: string }[];
+			save: (imagePath: string) => Promise<void>;
+			cleanup: () => boolean;
+	  }
 	| { type: "failure"; errors: { found: string; error: string; distance: number }[] }
 	| { type: "too many"; count: number; errors: { found: string; error: string; distance: number }[] }
 );
@@ -491,42 +534,45 @@ const parsePdf = async (pdfPath: string): Promise<[ParseResult[], () => Promise<
 
 	return [
 		await Promise.all(
-			Object.entries(PAGES).map(([pageNumStr, [folders, f]]) => {
-				return f(async (parser, save) => {
+			Object.entries(PAGES).map(([pageNumStr, [folders, f]]): Promise<ParseResult> => {
+				return f(async (parser, save): Promise<ParseResult> => {
 					const pageNum = Number(pageNumStr);
-					const [r, cleanup] = await withPage(pageNum, async (data) => {
-						const parses = parser([data, 0]);
-						const successes = parses.filter(isResult);
-						if (successes.length == 1) {
-							return {
-								type: "success" as const,
-								page: pageNum,
-								results: successes[0].result[0].flat(1),
-								save: async (imagePath: string) =>
-									await save(successes[0].result[0], pageNum, folders, imagePath),
-							};
-						} else {
-							const failures = parses.filter(isError);
-							if (successes.length == 0) {
+					const [r, cleanup] = await withPage(
+						pageNum,
+						async (data: Token[]): Promise<ParseResultWithoutCleanup> => {
+							const parses = parser([data, 0]);
+							const successes = parses.filter(isResult);
+							if (successes.length == 1) {
 								return {
-									type: "failure" as const,
+									type: "success",
 									page: pageNum,
-									errors: failures.map((v) => {
-										return { ...v, found: pr(v.found) };
-									}),
+									results: successes[0].result[0].flat(1),
+									save: async (imagePath: string) =>
+										await save(successes[0].result[0], pageNum, folders, imagePath),
 								};
 							} else {
-								return {
-									type: "too many" as const,
-									page: pageNum,
-									count: successes.length,
-									errors: failures.map((v) => {
-										return { ...v, found: pr(v.found) };
-									}),
-								};
+								const failures = parses.filter(isError);
+								if (successes.length == 0) {
+									return {
+										type: "failure",
+										page: pageNum,
+										errors: failures.map((v) => {
+											return { ...v, found: pr(v.found) };
+										}),
+									};
+								} else {
+									return {
+										type: "too many",
+										page: pageNum,
+										count: successes.length,
+										errors: failures.map((v) => {
+											return { ...v, found: pr(v.found) };
+										}),
+									};
+								}
 							}
-						}
-					});
+						},
+					);
 					if (r.type === "success") {
 						return { ...r, cleanup };
 					} else {
