@@ -1,13 +1,13 @@
 import * as pdfjsLib from "pdfjs-dist";
 import { Image, Token } from "./token";
-import { DocumentInitParameters, TypedArray } from "pdfjs-dist/types/src/display/api";
+import { DocumentInitParameters } from "pdfjs-dist/types/src/display/api";
 
 export const tokenizePDF = async (
-	docId: string | URL | TypedArray | ArrayBuffer | DocumentInitParameters,
+	parameters: DocumentInitParameters,
 ): Promise<
 	[<R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>, () => Promise<void>]
 > => {
-	const doc = await pdfjsLib.getDocument(docId).promise;
+	const doc = await pdfjsLib.getDocument(parameters).promise;
 
 	return [
 		async <R>(pageNum: number, f: (d: Token[]) => Promise<R>): Promise<[R, () => boolean]> => {
