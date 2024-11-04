@@ -441,59 +441,97 @@ const saveBeasts: SaveFunction<Beast> = async (
 	}
 };
 
-const PAGES = {
-	106: [["Equipment", "Consumables"], (f: Wrapper) => f(consumablesPage, saveConsumables)],
-	132: [["Equipment", "Weapons", "Basic"], (f: Wrapper) => f(basicWeapons, saveWeapons)],
-	133: [["Equipment", "Weapons", "Basic"], (f: Wrapper) => f(basicWeapons, saveWeapons)],
-	134: [["Equipment", "Armors", "Basic"], (f: Wrapper) => f(armorPage, saveArmors)],
-	135: [["Equipment", "Shields", "Basic"], (f: Wrapper) => f(shieldPage, saveShields)],
-	272: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	273: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	274: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	275: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	276: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	277: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	278: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	279: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	280: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	281: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	283: [["Equipment", "Armors", "Rare"], (f: Wrapper) => f(armorPage, saveArmors)],
-	284: [["Equipment", "Armors", "Rare"], (f: Wrapper) => f(armorPage, saveArmors)],
-	285: [["Equipment", "Shields", "Rare"], (f: Wrapper) => f(shieldPage, saveShields)],
-	287: [["Equipment", "Accessories"], (f: Wrapper) => f(accessories, saveAccessories)],
-	288: [["Equipment", "Accessories"], (f: Wrapper) => f(accessories, saveAccessories)],
-	289: [["Equipment", "Accessories"], (f: Wrapper) => f(accessories, saveAccessories)],
-	326: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	327: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	328: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	329: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	330: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	331: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	332: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	333: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	334: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	335: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	336: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	337: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	338: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	339: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	340: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	341: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	342: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	343: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	344: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	345: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	346: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	347: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	348: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	349: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	350: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	351: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	352: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	353: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	354: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	355: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-} as const;
+type PageContent = (typeof PAGE_CONTENT)[number];
+
+const PAGE_CONTENT = [
+	"Accessory",
+	"Basic Armor",
+	"Basic Shield",
+	"Basic Weapon",
+	"Bestiary",
+	"Consumable",
+	"Rare Armor",
+	"Rare Shield",
+	"Rare Weapon",
+] as const;
+
+const pageContent: Record<number, PageContent> = {
+	106: "Consumable",
+	132: "Basic Weapon",
+	133: "Basic Weapon",
+	134: "Basic Armor",
+	135: "Basic Shield",
+	272: "Rare Weapon",
+	273: "Rare Weapon",
+	274: "Rare Weapon",
+	275: "Rare Weapon",
+	276: "Rare Weapon",
+	277: "Rare Weapon",
+	278: "Rare Weapon",
+	279: "Rare Weapon",
+	280: "Rare Weapon",
+	281: "Rare Weapon",
+	283: "Rare Armor",
+	284: "Rare Armor",
+	285: "Rare Shield",
+	287: "Accessory",
+	288: "Accessory",
+	289: "Accessory",
+	326: "Bestiary",
+	327: "Bestiary",
+	328: "Bestiary",
+	329: "Bestiary",
+	330: "Bestiary",
+	331: "Bestiary",
+	332: "Bestiary",
+	333: "Bestiary",
+	334: "Bestiary",
+	335: "Bestiary",
+	336: "Bestiary",
+	337: "Bestiary",
+	338: "Bestiary",
+	339: "Bestiary",
+	340: "Bestiary",
+	341: "Bestiary",
+	342: "Bestiary",
+	343: "Bestiary",
+	344: "Bestiary",
+	345: "Bestiary",
+	346: "Bestiary",
+	347: "Bestiary",
+	348: "Bestiary",
+	349: "Bestiary",
+	350: "Bestiary",
+	351: "Bestiary",
+	352: "Bestiary",
+	353: "Bestiary",
+	354: "Bestiary",
+	355: "Bestiary",
+};
+
+const pageContentFolders: Record<PageContent, string[]> = {
+	Accessory: ["Equipment", "Accessories"],
+	"Basic Armor": ["Equipment", "Armors", "Basic"],
+	"Basic Shield": ["Equipment", "Shield", "Basic"],
+	"Basic Weapon": ["Equipment", "Weapon", "Basic"],
+	Bestiary: ["Beastiary"],
+	Consumable: ["Equipment", "Consumables"],
+	"Rare Armor": ["Equipment", "Armors", "Rare"],
+	"Rare Shield": ["Equipment", "Shield", "Rare"],
+	"Rare Weapon": ["Equipment", "Weapon", "Rare"],
+};
+
+const pageContentWrapper: Record<PageContent, (f: Wrapper) => Promise<ParseResult>> = {
+	Accessory: (f: Wrapper): Promise<ParseResult> => f(accessories, saveAccessories),
+	"Basic Armor": (f: Wrapper): Promise<ParseResult> => f(armorPage, saveArmors),
+	"Basic Shield": (f: Wrapper): Promise<ParseResult> => f(shieldPage, saveShields),
+	"Basic Weapon": (f: Wrapper): Promise<ParseResult> => f(basicWeapons, saveWeapons),
+	Bestiary: (f: Wrapper): Promise<ParseResult> => f(beastiary, saveBeasts),
+	Consumable: (f: Wrapper): Promise<ParseResult> => f(consumablesPage, saveConsumables),
+	"Rare Armor": (f: Wrapper): Promise<ParseResult> => f(armorPage, saveArmors),
+	"Rare Shield": (f: Wrapper): Promise<ParseResult> => f(shieldPage, saveShields),
+	"Rare Weapon": (f: Wrapper): Promise<ParseResult> => f(rareWeapons, saveWeapons),
+};
 
 type ParseResultWithoutCleanup =
 	| {
@@ -534,7 +572,9 @@ const parsePdf = async (pdfPath: string): Promise<[ParseResult[], () => Promise<
 
 	return [
 		await Promise.all(
-			Object.entries(PAGES).map(([pageNumStr, [folders, f]]): Promise<ParseResult> => {
+			Object.entries(pageContent).map(([pageNumStr, content]: [string, PageContent]): Promise<ParseResult> => {
+				const f: (f: Wrapper) => Promise<ParseResult> = pageContentWrapper[content];
+				const folders: string[] = pageContentFolders[content];
 				return f(async (parser, save): Promise<ParseResult> => {
 					const pageNum = Number(pageNumStr);
 					const [r, cleanup] = await withPage(
