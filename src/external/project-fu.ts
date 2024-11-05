@@ -32,6 +32,15 @@ declare global {
 			options?: { notify?: boolean },
 		): Promise<null | false | Response | Record<string, never>>;
 	};
+	const SceneNavigation: {
+		/**
+		 * Display progress of some major operation like loading Scene textures.
+		 * @param {object} [options={}] Options for how the progress bar is displayed
+		 * @param {string} [options.label] A text label to display
+		 * @param {number} [options.pct] A percentage of progress between 0 and 100
+		 */
+		displayProgressBar(options?: { label: string; pct: number }): void;
+	};
 	class FormApplication<T> {
 		constructor(object?: T, options?: unknown);
 		render(force?: boolean): FormApplication<T>;

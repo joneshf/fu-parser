@@ -617,11 +617,26 @@ export class ImportPDFApplication extends FormApplication<ImportPDFData> {
 			e.preventDefault();
 			this.object.inProgress = true;
 			this.render();
-			for (const p of this.object.parseResults) {
+			const label = "Importing Fabula Ultima PDF";
+			SceneNavigation.displayProgressBar({
+				label,
+				pct: 0,
+			});
+			for (let i = 0; i < this.object.parseResults.length; i++) {
+				const p = this.object.parseResults[i];
 				if (p.type === "success") {
 					await p.save(this.object.imagePath);
+					const percent: number = Math.round((i / this.object.parseResults.length) * 100);
+					SceneNavigation.displayProgressBar({
+						label,
+						pct: percent,
+					});
 				}
 			}
+			SceneNavigation.displayProgressBar({
+				label,
+				pct: 100,
+			});
 			this.close();
 		});
 	}
