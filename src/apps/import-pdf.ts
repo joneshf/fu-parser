@@ -1,14 +1,15 @@
 import * as pdfjsLib from "pdfjs-dist";
 import { Affinity, Parser, Stat, isError, isResult } from "../pdf/parsers/lib";
-import { Consumable, consumablesPage } from "../pdf/parsers/consumablePage";
-import { Weapon, basicWeapons, rareWeapons } from "../pdf/parsers/weaponPage";
-import { Armor, armorPage } from "../pdf/parsers/armorPage";
-import { Shield, shieldPage } from "../pdf/parsers/shieldPage";
-import { Accessory, accessories } from "../pdf/parsers/accessoryPage";
-import { Beast, beastiary } from "../pdf/parsers/beastiaryPage";
+import { Consumable } from "../pdf/parsers/consumablePage";
+import { Weapon } from "../pdf/parsers/weaponPage";
+import { Armor } from "../pdf/parsers/armorPage";
+import { Shield } from "../pdf/parsers/shieldPage";
+import { Accessory } from "../pdf/parsers/accessoryPage";
+import { Beast } from "../pdf/parsers/beastiaryPage";
 import { StringToken, Token } from "../pdf/lexers/token";
 import { tokenizePDF } from "../pdf/lexers/pdf";
 import { ATTR, FUActor, FUItem, getFolder, saveImage } from "../external/project-fu";
+import { PageContent, PageContentType, pageContent, pageContentParser } from "../pdf/parsers/fabula-ultima-pdf";
 
 // Relative url that foundry serves for the compiled webworker
 pdfjsLib.GlobalWorkerOptions.workerSrc = "modules/fu-parser/pdf.worker.js";
@@ -439,86 +440,6 @@ const saveBeasts: SaveFunction<Beast> = async (
 	}
 };
 
-type PageContent = (typeof PAGE_CONTENT)[number];
-
-const PAGE_CONTENT = [
-	"Accessory",
-	"Basic Armor",
-	"Basic Shield",
-	"Basic Weapon",
-	"Bestiary",
-	"Consumable",
-	"Rare Armor",
-	"Rare Shield",
-	"Rare Weapon",
-] as const;
-
-type PageContentType = {
-	Accessory: Accessory;
-	"Basic Armor": Armor;
-	"Basic Shield": Shield;
-	"Basic Weapon": Weapon;
-	Bestiary: Beast;
-	Consumable: Consumable;
-	"Rare Armor": Armor;
-	"Rare Shield": Shield;
-	"Rare Weapon": Weapon;
-};
-
-const pageContent: Map<number, PageContent> = new Map([
-	[106, "Consumable"],
-	[132, "Basic Weapon"],
-	[133, "Basic Weapon"],
-	[134, "Basic Armor"],
-	[135, "Basic Shield"],
-	[272, "Rare Weapon"],
-	[273, "Rare Weapon"],
-	[274, "Rare Weapon"],
-	[275, "Rare Weapon"],
-	[276, "Rare Weapon"],
-	[277, "Rare Weapon"],
-	[278, "Rare Weapon"],
-	[279, "Rare Weapon"],
-	[280, "Rare Weapon"],
-	[281, "Rare Weapon"],
-	[283, "Rare Armor"],
-	[284, "Rare Armor"],
-	[285, "Rare Shield"],
-	[287, "Accessory"],
-	[288, "Accessory"],
-	[289, "Accessory"],
-	[326, "Bestiary"],
-	[327, "Bestiary"],
-	[328, "Bestiary"],
-	[329, "Bestiary"],
-	[330, "Bestiary"],
-	[331, "Bestiary"],
-	[332, "Bestiary"],
-	[333, "Bestiary"],
-	[334, "Bestiary"],
-	[335, "Bestiary"],
-	[336, "Bestiary"],
-	[337, "Bestiary"],
-	[338, "Bestiary"],
-	[339, "Bestiary"],
-	[340, "Bestiary"],
-	[341, "Bestiary"],
-	[342, "Bestiary"],
-	[343, "Bestiary"],
-	[344, "Bestiary"],
-	[345, "Bestiary"],
-	[346, "Bestiary"],
-	[347, "Bestiary"],
-	[348, "Bestiary"],
-	[349, "Bestiary"],
-	[350, "Bestiary"],
-	[351, "Bestiary"],
-	[352, "Bestiary"],
-	[353, "Bestiary"],
-	[354, "Bestiary"],
-	[355, "Bestiary"],
-]);
-
 const pageContentFolders: Record<PageContent, string[]> = {
 	Accessory: ["Equipment", "Accessories"],
 	"Basic Armor": ["Equipment", "Armors", "Basic"],
@@ -529,20 +450,6 @@ const pageContentFolders: Record<PageContent, string[]> = {
 	"Rare Armor": ["Equipment", "Armors", "Rare"],
 	"Rare Shield": ["Equipment", "Shield", "Rare"],
 	"Rare Weapon": ["Equipment", "Weapon", "Rare"],
-};
-
-const pageContentParser: {
-	[pageContent in PageContent]: Parser<PageContentType[pageContent][]>;
-} = {
-	Accessory: accessories,
-	"Basic Armor": armorPage,
-	"Basic Shield": shieldPage,
-	"Basic Weapon": basicWeapons,
-	Bestiary: beastiary,
-	Consumable: consumablesPage,
-	"Rare Armor": armorPage,
-	"Rare Shield": shieldPage,
-	"Rare Weapon": rareWeapons,
 };
 
 const pageContentSaveFunction: {
