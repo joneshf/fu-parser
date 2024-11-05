@@ -23,8 +23,6 @@ for (const prop of ["deepFlatten", "equals", "partition", "filterJoin", "findSpl
 
 type SaveFunction<T> = (t: T[], pn: number, f: readonly string[], imagePath: string) => Promise<void>;
 
-type Wrapper = <T extends { name: string }>(p: Parser<T[]>, s: SaveFunction<T>) => Promise<ParseResult>;
-
 const AFF_MAPPING: Record<Affinity, number> = {
 	VU: -1,
 	N: 0,
@@ -455,6 +453,18 @@ const PAGE_CONTENT = [
 	"Rare Weapon",
 ] as const;
 
+type PageContentType = {
+	Accessory: Accessory;
+	"Basic Armor": Armor;
+	"Basic Shield": Shield;
+	"Basic Weapon": Weapon;
+	Bestiary: Beast;
+	Consumable: Consumable;
+	"Rare Armor": Armor;
+	"Rare Shield": Shield;
+	"Rare Weapon": Weapon;
+};
+
 const pageContent: Record<number, PageContent> = {
 	106: "Consumable",
 	132: "Basic Weapon",
@@ -521,16 +531,32 @@ const pageContentFolders: Record<PageContent, string[]> = {
 	"Rare Weapon": ["Equipment", "Weapon", "Rare"],
 };
 
-const pageContentWrapper: Record<PageContent, (f: Wrapper) => Promise<ParseResult>> = {
-	Accessory: (f: Wrapper): Promise<ParseResult> => f(accessories, saveAccessories),
-	"Basic Armor": (f: Wrapper): Promise<ParseResult> => f(armorPage, saveArmors),
-	"Basic Shield": (f: Wrapper): Promise<ParseResult> => f(shieldPage, saveShields),
-	"Basic Weapon": (f: Wrapper): Promise<ParseResult> => f(basicWeapons, saveWeapons),
-	Bestiary: (f: Wrapper): Promise<ParseResult> => f(beastiary, saveBeasts),
-	Consumable: (f: Wrapper): Promise<ParseResult> => f(consumablesPage, saveConsumables),
-	"Rare Armor": (f: Wrapper): Promise<ParseResult> => f(armorPage, saveArmors),
-	"Rare Shield": (f: Wrapper): Promise<ParseResult> => f(shieldPage, saveShields),
-	"Rare Weapon": (f: Wrapper): Promise<ParseResult> => f(rareWeapons, saveWeapons),
+const pageContentParser: {
+	[pageContent in PageContent]: Parser<PageContentType[pageContent][]>;
+} = {
+	Accessory: accessories,
+	"Basic Armor": armorPage,
+	"Basic Shield": shieldPage,
+	"Basic Weapon": basicWeapons,
+	Bestiary: beastiary,
+	Consumable: consumablesPage,
+	"Rare Armor": armorPage,
+	"Rare Shield": shieldPage,
+	"Rare Weapon": rareWeapons,
+};
+
+const pageContentSaveFunction: {
+	[pageContent in PageContent]: SaveFunction<PageContentType[pageContent]>;
+} = {
+	Accessory: saveAccessories,
+	"Basic Armor": saveArmors,
+	"Basic Shield": saveShields,
+	"Basic Weapon": saveWeapons,
+	Bestiary: saveBeasts,
+	Consumable: saveConsumables,
+	"Rare Armor": saveArmors,
+	"Rare Shield": saveShields,
+	"Rare Weapon": saveWeapons,
 };
 
 type ParseResultWithoutCleanup =
@@ -572,10 +598,11 @@ const parsePdf = async (pdfPath: string): Promise<[ParseResult[], () => Promise<
 
 	return [
 		await Promise.all(
-			Object.entries(pageContent).map(([pageNumStr, content]: [string, PageContent]): Promise<ParseResult> => {
-				const f: (f: Wrapper) => Promise<ParseResult> = pageContentWrapper[content];
-				const folders: string[] = pageContentFolders[content];
-				return f(async (parser, save): Promise<ParseResult> => {
+			Object.entries(pageContent).map(
+				async ([pageNumStr, content]: [string, PageContent]): Promise<ParseResult> => {
+					const folders: string[] = pageContentFolders[content];
+					const parser: Parser<PageContentType[typeof content][]> = pageContentParser[content];
+					const save = pageContentSaveFunction[content] as SaveFunction<PageContentType[typeof content]>;
 					const pageNum = Number(pageNumStr);
 					const [r, cleanup] = await withPage(
 						pageNum,
@@ -619,8 +646,8 @@ const parsePdf = async (pdfPath: string): Promise<[ParseResult[], () => Promise<
 						cleanup();
 						return r;
 					}
-				});
-			}),
+				},
+			),
 		),
 		destroy,
 	];
