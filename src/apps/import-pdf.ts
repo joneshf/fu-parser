@@ -465,59 +465,59 @@ type PageContentType = {
 	"Rare Weapon": Weapon;
 };
 
-const pageContent: Record<number, PageContent> = {
-	106: "Consumable",
-	132: "Basic Weapon",
-	133: "Basic Weapon",
-	134: "Basic Armor",
-	135: "Basic Shield",
-	272: "Rare Weapon",
-	273: "Rare Weapon",
-	274: "Rare Weapon",
-	275: "Rare Weapon",
-	276: "Rare Weapon",
-	277: "Rare Weapon",
-	278: "Rare Weapon",
-	279: "Rare Weapon",
-	280: "Rare Weapon",
-	281: "Rare Weapon",
-	283: "Rare Armor",
-	284: "Rare Armor",
-	285: "Rare Shield",
-	287: "Accessory",
-	288: "Accessory",
-	289: "Accessory",
-	326: "Bestiary",
-	327: "Bestiary",
-	328: "Bestiary",
-	329: "Bestiary",
-	330: "Bestiary",
-	331: "Bestiary",
-	332: "Bestiary",
-	333: "Bestiary",
-	334: "Bestiary",
-	335: "Bestiary",
-	336: "Bestiary",
-	337: "Bestiary",
-	338: "Bestiary",
-	339: "Bestiary",
-	340: "Bestiary",
-	341: "Bestiary",
-	342: "Bestiary",
-	343: "Bestiary",
-	344: "Bestiary",
-	345: "Bestiary",
-	346: "Bestiary",
-	347: "Bestiary",
-	348: "Bestiary",
-	349: "Bestiary",
-	350: "Bestiary",
-	351: "Bestiary",
-	352: "Bestiary",
-	353: "Bestiary",
-	354: "Bestiary",
-	355: "Bestiary",
-};
+const pageContent: Map<number, PageContent> = new Map([
+	[106, "Consumable"],
+	[132, "Basic Weapon"],
+	[133, "Basic Weapon"],
+	[134, "Basic Armor"],
+	[135, "Basic Shield"],
+	[272, "Rare Weapon"],
+	[273, "Rare Weapon"],
+	[274, "Rare Weapon"],
+	[275, "Rare Weapon"],
+	[276, "Rare Weapon"],
+	[277, "Rare Weapon"],
+	[278, "Rare Weapon"],
+	[279, "Rare Weapon"],
+	[280, "Rare Weapon"],
+	[281, "Rare Weapon"],
+	[283, "Rare Armor"],
+	[284, "Rare Armor"],
+	[285, "Rare Shield"],
+	[287, "Accessory"],
+	[288, "Accessory"],
+	[289, "Accessory"],
+	[326, "Bestiary"],
+	[327, "Bestiary"],
+	[328, "Bestiary"],
+	[329, "Bestiary"],
+	[330, "Bestiary"],
+	[331, "Bestiary"],
+	[332, "Bestiary"],
+	[333, "Bestiary"],
+	[334, "Bestiary"],
+	[335, "Bestiary"],
+	[336, "Bestiary"],
+	[337, "Bestiary"],
+	[338, "Bestiary"],
+	[339, "Bestiary"],
+	[340, "Bestiary"],
+	[341, "Bestiary"],
+	[342, "Bestiary"],
+	[343, "Bestiary"],
+	[344, "Bestiary"],
+	[345, "Bestiary"],
+	[346, "Bestiary"],
+	[347, "Bestiary"],
+	[348, "Bestiary"],
+	[349, "Bestiary"],
+	[350, "Bestiary"],
+	[351, "Bestiary"],
+	[352, "Bestiary"],
+	[353, "Bestiary"],
+	[354, "Bestiary"],
+	[355, "Bestiary"],
+]);
 
 const pageContentFolders: Record<PageContent, string[]> = {
 	Accessory: ["Equipment", "Accessories"],
@@ -598,56 +598,53 @@ const parsePdf = async (pdfPath: string): Promise<[ParseResult[], () => Promise<
 
 	return [
 		await Promise.all(
-			Object.entries(pageContent).map(
-				async ([pageNumStr, content]: [string, PageContent]): Promise<ParseResult> => {
-					const folders: string[] = pageContentFolders[content];
-					const parser: Parser<PageContentType[typeof content][]> = pageContentParser[content];
-					const save = pageContentSaveFunction[content] as SaveFunction<PageContentType[typeof content]>;
-					const pageNum = Number(pageNumStr);
-					const [r, cleanup] = await withPage(
-						pageNum,
-						async (data: Token[]): Promise<ParseResultWithoutCleanup> => {
-							const parses = parser([data, 0]);
-							const successes = parses.filter(isResult);
-							if (successes.length == 1) {
+			[...pageContent.entries()].map(async ([pageNum, content]: [number, PageContent]): Promise<ParseResult> => {
+				const folders: string[] = pageContentFolders[content];
+				const parser: Parser<PageContentType[typeof content][]> = pageContentParser[content];
+				const save = pageContentSaveFunction[content] as SaveFunction<PageContentType[typeof content]>;
+				const [r, cleanup] = await withPage(
+					pageNum,
+					async (data: Token[]): Promise<ParseResultWithoutCleanup> => {
+						const parses = parser([data, 0]);
+						const successes = parses.filter(isResult);
+						if (successes.length == 1) {
+							return {
+								type: "success",
+								page: pageNum,
+								results: successes[0].result[0].flat(1),
+								save: async (imagePath: string) =>
+									await save(successes[0].result[0], pageNum, folders, imagePath),
+							};
+						} else {
+							const failures = parses.filter(isError);
+							if (successes.length == 0) {
 								return {
-									type: "success",
+									type: "failure",
 									page: pageNum,
-									results: successes[0].result[0].flat(1),
-									save: async (imagePath: string) =>
-										await save(successes[0].result[0], pageNum, folders, imagePath),
+									errors: failures.map((v) => {
+										return { ...v, found: pr(v.found) };
+									}),
 								};
 							} else {
-								const failures = parses.filter(isError);
-								if (successes.length == 0) {
-									return {
-										type: "failure",
-										page: pageNum,
-										errors: failures.map((v) => {
-											return { ...v, found: pr(v.found) };
-										}),
-									};
-								} else {
-									return {
-										type: "too many",
-										page: pageNum,
-										count: successes.length,
-										errors: failures.map((v) => {
-											return { ...v, found: pr(v.found) };
-										}),
-									};
-								}
+								return {
+									type: "too many",
+									page: pageNum,
+									count: successes.length,
+									errors: failures.map((v) => {
+										return { ...v, found: pr(v.found) };
+									}),
+								};
 							}
-						},
-					);
-					if (r.type === "success") {
-						return { ...r, cleanup };
-					} else {
-						cleanup();
-						return r;
-					}
-				},
-			),
+						}
+					},
+				);
+				if (r.type === "success") {
+					return { ...r, cleanup };
+				} else {
+					cleanup();
+					return r;
+				}
+			}),
 		),
 		destroy,
 	];
