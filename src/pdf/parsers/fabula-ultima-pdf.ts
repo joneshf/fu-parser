@@ -102,8 +102,9 @@ export const pageContentParser: {
 
 export type PDFName = (typeof PDF_NAME)[number];
 
-const PDF_NAME = ["Core Rulebook"] as const;
+const PDF_NAME = ["Core Rulebook", "Core Rulebook 1.02"] as const;
 
 export const pdf: Record<PDFName, Map<number, PageContent>> = {
 	"Core Rulebook": coreRulebookPageContent,
+	"Core Rulebook 1.02": coreRulebookPageContent,
 };

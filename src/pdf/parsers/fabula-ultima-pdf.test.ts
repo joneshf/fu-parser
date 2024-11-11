@@ -13,7 +13,6 @@ const isENOENT = (x: unknown): x is { code: "ENOENT" } => {
 };
 
 const STANDARD_FONT_DATA_URL = "node_modules/pdfjs-dist/standard_fonts/";
-const FABULA_ULTIMA_PDF_PATH = "data/Fabula_Ultima_-_Core_Rulebook.pdf";
 
 const tokenize = async (filePath: string): Promise<[WithPDF, Destroy] | null> => {
 	try {
@@ -30,7 +29,10 @@ const tokenize = async (filePath: string): Promise<[WithPDF, Destroy] | null> =>
 	}
 };
 
-const tokenizedCoreRulebook: [WithPDF, Destroy] | null = await tokenize(FABULA_ULTIMA_PDF_PATH);
+const tokenizedCoreRulebook: [WithPDF, Destroy] | null = await tokenize("data/Fabula_Ultima_-_Core_Rulebook.pdf");
+const tokenizedCoreRulebook_1_02: [WithPDF, Destroy] | null = await tokenize(
+	"data/Fabula_Ultima_-_Core_Rulebook_1.02.pdf",
+);
 
 const pageContentName: Record<PageContent, string> = {
 	Accessory: "Accessories",
@@ -50,10 +52,8 @@ type DescribePDF = {
 };
 
 describe.each<DescribePDF>([
-	{
-		name: "Core Rulebook",
-		tokenized: tokenizedCoreRulebook,
-	},
+	{ name: "Core Rulebook", tokenized: tokenizedCoreRulebook },
+	{ name: "Core Rulebook 1.02", tokenized: tokenizedCoreRulebook_1_02 },
 ])("parses pages for $name", (describePDF: DescribePDF): void => {
 	if (describePDF.tokenized == null) {
 		return;
