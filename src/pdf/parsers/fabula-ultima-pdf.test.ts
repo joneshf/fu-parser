@@ -4,13 +4,33 @@ import { Destroy, tokenizePDF, WithPDF } from "../lexers/pdf";
 import { Parser, isResult } from "./lib";
 import { PageContent, pageContentParser, PageContentType, pdf, PDFName } from "./fabula-ultima-pdf";
 
+const isObject = (x: unknown): x is object => {
+	return x != null && typeof x === "object";
+};
+
+const isENOENT = (x: unknown): x is { code: "ENOENT" } => {
+	return isObject(x) && "code" in x && x.code === "ENOENT";
+};
+
 const STANDARD_FONT_DATA_URL = "node_modules/pdfjs-dist/standard_fonts/";
 const FABULA_ULTIMA_PDF_PATH = "data/Fabula_Ultima_-_Core_Rulebook.pdf";
 
-const tokenizedCoreRulebook: [WithPDF, Destroy] = await tokenizePDF({
-	data: new Uint8Array(fs.readFileSync(FABULA_ULTIMA_PDF_PATH)),
-	standardFontDataUrl: STANDARD_FONT_DATA_URL,
-});
+const tokenize = async (filePath: string): Promise<[WithPDF, Destroy] | null> => {
+	try {
+		return tokenizePDF({
+			data: new Uint8Array(fs.readFileSync(filePath)),
+			standardFontDataUrl: STANDARD_FONT_DATA_URL,
+		});
+	} catch (error: unknown) {
+		if (!isENOENT(error)) {
+			throw error;
+		}
+
+		return null;
+	}
+};
+
+const tokenizedCoreRulebook: [WithPDF, Destroy] | null = await tokenize(FABULA_ULTIMA_PDF_PATH);
 
 const pageContentName: Record<PageContent, string> = {
 	Accessory: "Accessories",
@@ -26,7 +46,7 @@ const pageContentName: Record<PageContent, string> = {
 
 type DescribePDF = {
 	name: PDFName;
-	tokenized: [WithPDF, Destroy];
+	tokenized: [WithPDF, Destroy] | null;
 };
 
 describe.each<DescribePDF>([
@@ -35,6 +55,10 @@ describe.each<DescribePDF>([
 		tokenized: tokenizedCoreRulebook,
 	},
 ])("parses pages for $name", (describePDF: DescribePDF): void => {
+	if (describePDF.tokenized == null) {
+		return;
+	}
+
 	const [withPage, destroy]: [WithPDF, Destroy] = describePDF.tokenized;
 	const pageContent: Map<number, PageContent> = pdf[describePDF.name];
 	type PageContentWithName = {
