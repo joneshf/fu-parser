@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { cost, multiString, word, description } from "../arbs/arbs";
-import { flatMap, isResult, prettifyStrings } from "./lib";
+import { isResult, prettifyStrings } from "./lib";
 import { Image, Token } from "../lexers/token";
 import { imageToken, stringToken, watermark } from "../arbs/output";
 import { Consumable, consumablesPage } from "./consumablePage";
@@ -28,9 +28,9 @@ test("parses generated", () => {
 				imageToken({ width: 0, height: 0 } as Image),
 				imageToken({ width: 0, height: 0 } as Image),
 				stringToken(""),
-				...flatMap(cs, ([h, d]) => [
+				...cs.flatMap(([h, d]) => [
 					stringToken(h),
-					...flatMap(d, (m) => [
+					...d.flatMap((m) => [
 						imageToken(m.image),
 						...m.name.map((s) => stringToken(s)),
 						stringToken(m.ipCost.toString()),

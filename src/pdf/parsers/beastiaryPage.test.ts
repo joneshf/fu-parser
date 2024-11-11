@@ -2,7 +2,7 @@ import fc from "fast-check";
 import { description, resistance, descriptionEnd, word } from "../arbs/arbs";
 import { imageToken, stringToken, watermark } from "../arbs/output";
 import { Image, Token } from "../lexers/token";
-import { DAMAGE_TYPES, DIE_SIZES, Distance, STATS, flatMap, isResult, prettifyStrings, TYPE_CODES } from "./lib";
+import { DAMAGE_TYPES, DIE_SIZES, Distance, STATS, isResult, prettifyStrings, TYPE_CODES } from "./lib";
 import { Beast, beastiary } from "./beastiaryPage";
 
 const beastiaryDataGen = fc.array(
@@ -93,7 +93,7 @@ test("parses generated", () => {
 				imageToken({ width: 0, height: 0 } as Image),
 				imageToken({ width: 0, height: 0 } as Image),
 				stringToken(""),
-				...flatMap(cs, (b) => [
+				...cs.flatMap((b) => [
 					imageToken(b.image),
 					stringToken(b.name),
 					stringToken(`Lv ${b.level}`),
@@ -115,7 +115,7 @@ test("parses generated", () => {
 					stringToken(`Init. ${b.attributes.init}`),
 					stringToken(`DEF +${b.attributes.def}`),
 					stringToken(`M.DEF +${b.attributes.mdef}`),
-					...flatMap(DAMAGE_TYPES, (k) => {
+					...DAMAGE_TYPES.flatMap((k) => {
 						const resist = b.resists[k];
 						if (resist != null) {
 							const tok = stringToken(TYPE_CODES[k]);
@@ -128,7 +128,7 @@ test("parses generated", () => {
 						? []
 						: [stringToken("Equipment:"), stringToken(b.equipment.join(", ") + ".")]),
 					stringToken("BASIC ATTACKS"),
-					...flatMap(b.attacks, (a) => [
+					...b.attacks.flatMap((a) => [
 						...(a.range == "melee"
 							? [stringToken("$", "DHVFUS+Evilz")]
 							: [stringToken("a", "QTFAUS+fabulaultima"), stringToken("a", "QTFAUS+fabulaultima")]),
@@ -149,7 +149,7 @@ test("parses generated", () => {
 						? []
 						: [
 								stringToken("SPELLS"),
-								...flatMap(b.spells, (spell) => [
+								...b.spells.flatMap((spell) => [
 									stringToken("h", "DHVFUS+Evilz"),
 									stringToken(spell.name),
 									...(spell.accuracy == null
@@ -185,7 +185,7 @@ test("parses generated", () => {
 						? []
 						: [
 								stringToken("OTHER ACTIONS"),
-								...flatMap(b.otherActions, (oa) => [
+								...b.otherActions.flatMap((oa) => [
 									stringToken("S", "MNCCQA+WebSymbols-Regular"),
 									stringToken(oa.name, "WTLEAG+PTSans-NarrowBold"),
 									stringToken("w", "XFYKOE+Wingdings-Regular"),
@@ -196,7 +196,7 @@ test("parses generated", () => {
 						? []
 						: [
 								stringToken("SPECIAL RULES"),
-								...flatMap(b.specialRules, (sr) => [
+								...b.specialRules.flatMap((sr) => [
 									stringToken(sr.name),
 									stringToken("w", "XFYKOE+Wingdings-Regular"),
 									...sr.description.map((s) => stringToken(s, "FBDLWO+PTSans-Narrow")),

@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { cost, description, word } from "../arbs/arbs";
-import { flatMap, isResult, prettifyStrings } from "./lib";
+import { isResult, prettifyStrings } from "./lib";
 import { Image, Token } from "../lexers/token";
 import { imageToken, stringToken, watermark } from "../arbs/output";
 import { Shield, shieldPage } from "./shieldPage";
@@ -27,7 +27,7 @@ test("parses generated", () => {
 				imageToken({ width: 0, height: 0 } as Image),
 				stringToken(""),
 
-				...flatMap(data, (m) => [
+				...data.flatMap((m) => [
 					imageToken(m.image),
 					stringToken(m.name),
 					...(m.martial ? [stringToken("E", "FnT_BasicShapes1")] : []),
