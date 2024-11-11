@@ -1,14 +1,15 @@
 import * as pdfjsLib from "pdfjs-dist";
 import { Affinity, Parser, Stat, isError, isResult } from "../pdf/parsers/lib";
-import { Consumable, consumablesPage } from "../pdf/parsers/consumablePage";
-import { Weapon, basicWeapons, rareWeapons } from "../pdf/parsers/weaponPage";
-import { Armor, armorPage } from "../pdf/parsers/armorPage";
-import { Shield, shieldPage } from "../pdf/parsers/shieldPage";
-import { Accessory, accessories } from "../pdf/parsers/accessoryPage";
-import { Beast, beastiary } from "../pdf/parsers/beastiaryPage";
-import { StringToken } from "../pdf/lexers/token";
+import { Consumable } from "../pdf/parsers/consumablePage";
+import { Weapon } from "../pdf/parsers/weaponPage";
+import { Armor } from "../pdf/parsers/armorPage";
+import { Shield } from "../pdf/parsers/shieldPage";
+import { Accessory } from "../pdf/parsers/accessoryPage";
+import { Beast } from "../pdf/parsers/beastiaryPage";
+import { StringToken, Token } from "../pdf/lexers/token";
 import { tokenizePDF } from "../pdf/lexers/pdf";
 import { ATTR, FUActor, FUItem, getFolder, saveImage } from "../external/project-fu";
+import { PageContent, PageContentType, pageContent, pageContentParser } from "../pdf/parsers/fabula-ultima-pdf";
 
 // Relative url that foundry serves for the compiled webworker
 pdfjsLib.GlobalWorkerOptions.workerSrc = "modules/fu-parser/pdf.worker.js";
@@ -21,10 +22,7 @@ for (const prop of ["deepFlatten", "equals", "partition", "filterJoin", "findSpl
 	});
 }
 
-type Wrapper = <T extends { name: string }>(
-	p: Parser<T[]>,
-	s: (t: T[], pn: number, f: readonly string[], imagePath: string) => Promise<void>,
-) => Promise<ParseResult>;
+type SaveFunction<T> = (t: T[], pn: number, f: readonly string[], imagePath: string) => Promise<void>;
 
 const AFF_MAPPING: Record<Affinity, number> = {
 	VU: -1,
@@ -40,7 +38,7 @@ const STAT_MAPPING: Record<Stat, ATTR> = {
 	INS: "ins",
 	WLP: "wlp",
 };
-const saveConsumables = async (
+const saveConsumables: SaveFunction<Consumable> = async (
 	consumables: Consumable[],
 	pageNum: number,
 	folderNames: readonly string[],
@@ -66,7 +64,12 @@ const saveConsumables = async (
 	}
 };
 
-const saveWeapons = async (weapons: Weapon[], pageNum: number, folderNames: readonly string[], imagePath: string) => {
+const saveWeapons: SaveFunction<Weapon> = async (
+	weapons: Weapon[],
+	pageNum: number,
+	folderNames: readonly string[],
+	imagePath: string,
+) => {
 	const folder = await getFolder(folderNames, "Item");
 	if (folder) {
 		for (const data of weapons) {
@@ -103,7 +106,12 @@ const saveWeapons = async (weapons: Weapon[], pageNum: number, folderNames: read
 	}
 };
 
-const saveArmors = async (armors: Armor[], pageNum: number, folderNames: readonly string[], imagePath: string) => {
+const saveArmors: SaveFunction<Armor> = async (
+	armors: Armor[],
+	pageNum: number,
+	folderNames: readonly string[],
+	imagePath: string,
+) => {
 	const folder = await getFolder(folderNames, "Item");
 	if (folder) {
 		for (const data of armors) {
@@ -130,7 +138,7 @@ const saveArmors = async (armors: Armor[], pageNum: number, folderNames: readonl
 	}
 };
 
-const saveAccessories = async (
+const saveAccessories: SaveFunction<Accessory> = async (
 	accessories: Accessory[],
 	pageNum: number,
 	folderNames: readonly string[],
@@ -162,7 +170,12 @@ const saveAccessories = async (
 	}
 };
 
-const saveShields = async (shields: Shield[], pageNum: number, folderNames: readonly string[], imagePath: string) => {
+const saveShields: SaveFunction<Shield> = async (
+	shields: Shield[],
+	pageNum: number,
+	folderNames: readonly string[],
+	imagePath: string,
+) => {
 	const folder = await getFolder(folderNames, "Item");
 	if (folder) {
 		for (const data of shields) {
@@ -189,7 +202,12 @@ const saveShields = async (shields: Shield[], pageNum: number, folderNames: read
 	}
 };
 
-const saveBeasts = async (beasts: Beast[], pageNum: number, folderNames: readonly string[], imagePath: string) => {
+const saveBeasts: SaveFunction<Beast> = async (
+	beasts: Beast[],
+	pageNum: number,
+	folderNames: readonly string[],
+	imagePath: string,
+) => {
 	for (const b of beasts) {
 		const folder = await getFolder([...folderNames, b.type], "Actor");
 		if (folder) {
@@ -422,62 +440,58 @@ const saveBeasts = async (beasts: Beast[], pageNum: number, folderNames: readonl
 	}
 };
 
-const PAGES = {
-	106: [["Equipment", "Consumables"], (f: Wrapper) => f(consumablesPage, saveConsumables)],
-	132: [["Equipment", "Weapons", "Basic"], (f: Wrapper) => f(basicWeapons, saveWeapons)],
-	133: [["Equipment", "Weapons", "Basic"], (f: Wrapper) => f(basicWeapons, saveWeapons)],
-	134: [["Equipment", "Armors", "Basic"], (f: Wrapper) => f(armorPage, saveArmors)],
-	135: [["Equipment", "Shields", "Basic"], (f: Wrapper) => f(shieldPage, saveShields)],
-	272: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	273: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	274: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	275: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	276: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	277: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	278: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	279: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	280: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	281: [["Equipment", "Weapons", "Rare"], (f: Wrapper) => f(rareWeapons, saveWeapons)],
-	283: [["Equipment", "Armors", "Rare"], (f: Wrapper) => f(armorPage, saveArmors)],
-	284: [["Equipment", "Armors", "Rare"], (f: Wrapper) => f(armorPage, saveArmors)],
-	285: [["Equipment", "Shields", "Rare"], (f: Wrapper) => f(shieldPage, saveShields)],
-	287: [["Equipment", "Accessories"], (f: Wrapper) => f(accessories, saveAccessories)],
-	288: [["Equipment", "Accessories"], (f: Wrapper) => f(accessories, saveAccessories)],
-	289: [["Equipment", "Accessories"], (f: Wrapper) => f(accessories, saveAccessories)],
-	326: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	327: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	328: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	329: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	330: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	331: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	332: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	333: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	334: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	335: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	336: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	337: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	338: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	339: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	340: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	341: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	342: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	343: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	344: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	345: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	346: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	347: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	348: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	349: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	350: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	351: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	352: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	353: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	354: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-	355: [["Beastiary"], (f: Wrapper) => f(beastiary, saveBeasts)],
-} as const;
+const pageContentFolders: Record<PageContent, string[]> = {
+	Accessory: ["Equipment", "Accessories"],
+	"Basic Armor": ["Equipment", "Armors", "Basic"],
+	"Basic Shield": ["Equipment", "Shield", "Basic"],
+	"Basic Weapon": ["Equipment", "Weapon", "Basic"],
+	Bestiary: ["Beastiary"],
+	Consumable: ["Equipment", "Consumables"],
+	"Rare Armor": ["Equipment", "Armors", "Rare"],
+	"Rare Shield": ["Equipment", "Shield", "Rare"],
+	"Rare Weapon": ["Equipment", "Weapon", "Rare"],
+};
+
+const pageContentSaveFunction: {
+	[pageContent in PageContent]: SaveFunction<PageContentType[pageContent]>;
+} = {
+	Accessory: saveAccessories,
+	"Basic Armor": saveArmors,
+	"Basic Shield": saveShields,
+	"Basic Weapon": saveWeapons,
+	Bestiary: saveBeasts,
+	Consumable: saveConsumables,
+	"Rare Armor": saveArmors,
+	"Rare Shield": saveShields,
+	"Rare Weapon": saveWeapons,
+};
+
+type ParseResultWithoutCleanup =
+	| {
+			type: "success";
+			page: number;
+			results: { name: string }[];
+			save: (imagePath: string) => Promise<void>;
+	  }
+	| {
+			type: "failure";
+			errors: { found: string; error: string; distance: number }[];
+			page: number;
+	  }
+	| {
+			type: "too many";
+			count: number;
+			errors: { found: string; error: string; distance: number }[];
+			page: number;
+	  };
 
 type ParseResult = { page: number } & (
-	| { type: "success"; save: (imagePath: string) => Promise<void>; cleanup: () => boolean }
+	| {
+			type: "success";
+			results: { name: string }[];
+			save: (imagePath: string) => Promise<void>;
+			cleanup: () => boolean;
+	  }
 	| { type: "failure"; errors: { found: string; error: string; distance: number }[] }
 	| { type: "too many"; count: number; errors: { found: string; error: string; distance: number }[] }
 );
@@ -491,15 +505,18 @@ const parsePdf = async (pdfPath: string): Promise<[ParseResult[], () => Promise<
 
 	return [
 		await Promise.all(
-			Object.entries(PAGES).map(([pageNumStr, [folders, f]]) => {
-				return f(async (parser, save) => {
-					const pageNum = Number(pageNumStr);
-					const [r, cleanup] = await withPage(pageNum, async (data) => {
+			[...pageContent.entries()].map(async ([pageNum, content]: [number, PageContent]): Promise<ParseResult> => {
+				const folders: string[] = pageContentFolders[content];
+				const parser: Parser<PageContentType[typeof content][]> = pageContentParser[content];
+				const save = pageContentSaveFunction[content] as SaveFunction<PageContentType[typeof content]>;
+				const [r, cleanup] = await withPage(
+					pageNum,
+					async (data: Token[]): Promise<ParseResultWithoutCleanup> => {
 						const parses = parser([data, 0]);
 						const successes = parses.filter(isResult);
 						if (successes.length == 1) {
 							return {
-								type: "success" as const,
+								type: "success",
 								page: pageNum,
 								results: successes[0].result[0].flat(1),
 								save: async (imagePath: string) =>
@@ -509,7 +526,7 @@ const parsePdf = async (pdfPath: string): Promise<[ParseResult[], () => Promise<
 							const failures = parses.filter(isError);
 							if (successes.length == 0) {
 								return {
-									type: "failure" as const,
+									type: "failure",
 									page: pageNum,
 									errors: failures.map((v) => {
 										return { ...v, found: pr(v.found) };
@@ -517,7 +534,7 @@ const parsePdf = async (pdfPath: string): Promise<[ParseResult[], () => Promise<
 								};
 							} else {
 								return {
-									type: "too many" as const,
+									type: "too many",
 									page: pageNum,
 									count: successes.length,
 									errors: failures.map((v) => {
@@ -526,14 +543,14 @@ const parsePdf = async (pdfPath: string): Promise<[ParseResult[], () => Promise<
 								};
 							}
 						}
-					});
-					if (r.type === "success") {
-						return { ...r, cleanup };
-					} else {
-						cleanup();
-						return r;
-					}
-				});
+					},
+				);
+				if (r.type === "success") {
+					return { ...r, cleanup };
+				} else {
+					cleanup();
+					return r;
+				}
 			}),
 		),
 		destroy,
