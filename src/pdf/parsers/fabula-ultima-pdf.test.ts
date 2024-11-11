@@ -1,16 +1,38 @@
 import { describe, expect, test } from "@jest/globals";
 import fs from "fs";
-import { tokenizePDF } from "../lexers/pdf";
+import { Destroy, tokenizePDF, WithPDF } from "../lexers/pdf";
 import { Parser, isResult } from "./lib";
-import { PageContent, pageContentParser, PageContentType, pdf } from "./fabula-ultima-pdf";
+import { PageContent, pageContentParser, PageContentType, pdf, PDFName } from "./fabula-ultima-pdf";
+
+const isObject = (x: unknown): x is object => {
+	return x != null && typeof x === "object";
+};
+
+const isENOENT = (x: unknown): x is { code: "ENOENT" } => {
+	return isObject(x) && "code" in x && x.code === "ENOENT";
+};
 
 const STANDARD_FONT_DATA_URL = "node_modules/pdfjs-dist/standard_fonts/";
-const FABULA_ULTIMA_PDF_PATH = "data/Fabula_Ultima_-_Core_Rulebook.pdf";
 
-const [withPage, destroy] = await tokenizePDF({
-	data: new Uint8Array(fs.readFileSync(FABULA_ULTIMA_PDF_PATH)),
-	standardFontDataUrl: STANDARD_FONT_DATA_URL,
-});
+const tokenize = async (filePath: string): Promise<[WithPDF, Destroy] | null> => {
+	try {
+		return tokenizePDF({
+			data: new Uint8Array(fs.readFileSync(filePath)),
+			standardFontDataUrl: STANDARD_FONT_DATA_URL,
+		});
+	} catch (error: unknown) {
+		if (!isENOENT(error)) {
+			throw error;
+		}
+
+		return null;
+	}
+};
+
+const tokenizedCoreRulebook: [WithPDF, Destroy] | null = await tokenize("data/Fabula_Ultima_-_Core_Rulebook.pdf");
+const tokenizedCoreRulebook_1_02: [WithPDF, Destroy] | null = await tokenize(
+	"data/Fabula_Ultima_-_Core_Rulebook_1.02.pdf",
+);
 
 const pageContentName: Record<PageContent, string> = {
 	Accessory: "Accessories",
@@ -24,18 +46,44 @@ const pageContentName: Record<PageContent, string> = {
 	"Rare Weapon": "Weapons - Rare",
 };
 
-describe("parses pages", () => {
-	const pageContent: Map<number, PageContent> = pdf["Core Rulebook"];
-	for (const [page, content] of pageContent) {
-		const f: Parser<PageContentType[typeof content][]> = pageContentParser[content];
-		const name: string = pageContentName[content];
-		test(`${page} - ${name}`, async () => {
-			await withPage(page, async (d) => {
-				const successful = f([d, 0]).filter(isResult);
-				expect(successful.length).toBe(1);
-			});
-		});
+type DescribePDF = {
+	name: PDFName;
+	tokenized: [WithPDF, Destroy] | null;
+};
+
+describe.each<DescribePDF>([
+	{ name: "Core Rulebook", tokenized: tokenizedCoreRulebook },
+	{ name: "Core Rulebook 1.02", tokenized: tokenizedCoreRulebook_1_02 },
+])("parses pages for $name", (describePDF: DescribePDF): void => {
+	if (describePDF.tokenized == null) {
+		return;
 	}
+
+	const [withPage, destroy]: [WithPDF, Destroy] = describePDF.tokenized;
+	const pageContent: Map<number, PageContent> = pdf[describePDF.name];
+	type PageContentWithName = {
+		content: PageContent;
+		name: string;
+		page: number;
+	};
+	const pageContentWithName: PageContentWithName[] = [...pageContent].map(
+		([page, content]: [number, PageContent]): PageContentWithName => {
+			return {
+				content,
+				name: pageContentName[content],
+				page,
+			};
+		},
+	);
+	test.each(pageContentWithName)(`$page - $name`, async (pageContentWithName: PageContentWithName): Promise<void> => {
+		const content: PageContent = pageContentWithName.content;
+		const page: number = pageContentWithName.page;
+		const f: Parser<PageContentType[typeof content][]> = pageContentParser[content];
+		await withPage(page, async (d) => {
+			const successful = f([d, 0]).filter(isResult);
+			expect(successful.length).toBe(1);
+		});
+	});
 
 	// test("current", async () => {
 	// 	await withPage(350, async (d) => {

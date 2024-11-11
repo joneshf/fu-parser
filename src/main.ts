@@ -61,6 +61,7 @@ Hooks.on("renderSettings", async (_app, $html) => {
 					pdfName: "Core Rulebook",
 					pdfNames: {
 						"Core Rulebook": "Core Rulebook",
+						"Core Rulebook 1.02": "Core Rulebook 1.02",
 					},
 					pdfPath: "",
 					imagePath: "",
