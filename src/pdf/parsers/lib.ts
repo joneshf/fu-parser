@@ -150,7 +150,7 @@ export const description = alt(
 
 export const starting = seq(image, image, many1(str));
 
-export const sep = textWithFont("w", [/Wingdings-Regular$/]);
+export const sep = alt(textWithFont("w", [/Wingdings-Regular$/]), textWithFont("", [/Wingdings-Regular$/]));
 export const matches = (r: RegExp, errorMsg: string) =>
 	fmap(satisfy((t) => isStringToken(t) && r.test(t.string), errorMsg) as Parser<StringToken>, (t) => t.string);
 

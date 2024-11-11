@@ -485,7 +485,9 @@ type ParseResult = { page: number } & (
 const pr = (z: string | StringToken) => (typeof z === "string" ? z : `<Text str="${z.string}" font="${z.font}">`);
 
 const parsePdf = async (pdfPath: string): Promise<[ParseResult[], () => Promise<void>]> => {
-	const [withPage, destroy] = await tokenizePDF(pdfPath);
+	const [withPage, destroy] = await tokenizePDF({
+		url: pdfPath,
+	});
 
 	return [
 		await Promise.all(
