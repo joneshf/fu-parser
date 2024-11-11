@@ -21,7 +21,7 @@ for (const prop of ["deepFlatten", "equals", "partition", "filterJoin", "findSpl
 	});
 }
 
-type Wrapper = <T extends { name: string } | [string, { name: string }[]]>(
+type Wrapper = <T extends { name: string }>(
 	p: Parser<T[]>,
 	s: (t: T[], pn: number, f: readonly string[], imagePath: string) => Promise<void>,
 ) => Promise<ParseResult>;
@@ -41,29 +41,27 @@ const STAT_MAPPING: Record<Stat, ATTR> = {
 	WLP: "wlp",
 };
 const saveConsumables = async (
-	categories: [string, Consumable[]][],
+	consumables: Consumable[],
 	pageNum: number,
 	folderNames: readonly string[],
 	imagePath: string,
 ) => {
-	for (const [category, consumables] of categories) {
-		const folder = await getFolder([...folderNames, category], "Item");
+	for (const data of consumables) {
+		const folder = await getFolder([...folderNames, data.category], "Item");
 		if (folder) {
-			for (const data of consumables) {
-				await saveImage(data.image, data.name + ".png", imagePath);
-				const payload: FUItem = {
-					type: "consumable" as const,
-					name: data.name,
-					img: imagePath + "/" + data.name + ".png",
-					folder: folder._id,
-					system: {
-						ipCost: { value: data.ipCost },
-						description: data.description,
-						source: { value: pageNum - 2 },
-					},
-				};
-				await Item.create(payload);
-			}
+			await saveImage(data.image, data.name + ".png", imagePath);
+			const payload: FUItem = {
+				type: "consumable" as const,
+				name: data.name,
+				img: imagePath + "/" + data.name + ".png",
+				folder: folder._id,
+				system: {
+					ipCost: { value: data.ipCost },
+					description: data.description,
+					source: { value: pageNum - 2 },
+				},
+			};
+			await Item.create(payload);
 		}
 	}
 };
@@ -501,10 +499,7 @@ const parsePdf = async (pdfPath: string): Promise<[ParseResult[], () => Promise<
 							return {
 								type: "success" as const,
 								page: pageNum,
-								results: successes[0].result[0].flatMap<
-									{ name: string } | [string, { name: string }[]],
-									{ name: string }
-								>((v) => ("name" in v ? [v] : v[1])),
+								results: successes[0].result[0].flat(1),
 								save: async (imagePath: string) =>
 									await save(successes[0].result[0], pageNum, folders, imagePath),
 							};

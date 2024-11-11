@@ -41,12 +41,11 @@ test("parses generated", () => {
 				watermark,
 			];
 			const parses = consumablesPage([pageTokens, 0]);
-			const expected: [string, Consumable[]][] = cs.map(([h, vs]) => [
-				h,
-				vs.map((v) => {
-					return { ...v, description: prettifyStrings(v.description), name: v.name.join(" ") };
+			const expected: Consumable[] = cs.flatMap(([h, vs]): Consumable[] =>
+				vs.map((v): Consumable => {
+					return { ...v, category: h, description: prettifyStrings(v.description), name: v.name.join(" ") };
 				}),
-			]);
+			);
 			const successful = parses.filter(isResult);
 			for (const p of successful) {
 				expect(p.result[0]).toEqual(expected);

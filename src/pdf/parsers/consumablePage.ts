@@ -16,9 +16,13 @@ import {
 	watermark,
 } from "./lib";
 
-export type Consumable = { image: Image; name: string; description: string; ipCost: number };
+type ConsumableListing = { image: Image; name: string; description: string; ipCost: number };
 
-const consumableParser: Parser<Consumable> = fmap(
+export type Consumable = ConsumableListing & {
+	category: string;
+};
+
+const consumableListingParser: Parser<ConsumableListing> = fmap(
 	seq(
 		image,
 		fmap(many1(str), (s) => s.join(" ")),
@@ -31,4 +35,17 @@ const consumableParser: Parser<Consumable> = fmap(
 );
 
 const header = matches(/^[^.?!]*$/, "header");
-export const consumablesPage = kl(kr(starting, many1(then(header, many1(consumableParser)))), seq(str, watermark, eof));
+
+const consumableParser: Parser<Consumable[]> = fmap(
+	then(header, many1(consumableListingParser)),
+	([category, consumableListings]: [string, ConsumableListing[]]): Consumable[] => {
+		return consumableListings.map((consumableListing: ConsumableListing): Consumable => {
+			return { ...consumableListing, category };
+		});
+	},
+);
+
+export const consumablesPage: Parser<Consumable[]> = fmap(
+	kl(kr(starting, many1(consumableParser)), seq(str, watermark, eof)),
+	(consumables: Consumable[][]): Consumable[] => consumables.flat(1),
+);
