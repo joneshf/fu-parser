@@ -1,6 +1,6 @@
 import fc from "fast-check";
 import { cost, word, description } from "../arbs/arbs";
-import { DAMAGE_TYPES, DISTANCES, HANDED, STATS, WEAPON_CATEGORIES, flatMap, isResult, prettifyStrings } from "./lib";
+import { DAMAGE_TYPES, DISTANCES, HANDED, STATS, WEAPON_CATEGORIES, isResult, prettifyStrings } from "./lib";
 import { Image, Token } from "../lexers/token";
 import { imageToken, stringToken, watermark } from "../arbs/output";
 import { Weapon, rareWeapons } from "./weaponPage";
@@ -29,7 +29,7 @@ test("rare weapon parses generated", () => {
 				stringToken(""),
 				stringToken(`SAMPLE RARE ${category} WEAPONS`),
 				stringToken(""),
-				...flatMap(d, (m) => [
+				...d.flatMap((m) => [
 					imageToken(m.image),
 					stringToken(m.name),
 					...(m.martial ? [stringToken("E", "FnT_BasicShapes1")] : []),

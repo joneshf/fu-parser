@@ -1,5 +1,5 @@
 import * as pdfjsLib from "pdfjs-dist";
-import { Affinity, Parser, Stat, flatMap, isError, isResult } from "../pdf/parsers/lib";
+import { Affinity, Parser, Stat, isError, isResult } from "../pdf/parsers/lib";
 import { Consumable, consumablesPage } from "../pdf/parsers/consumablePage";
 import { Weapon, basicWeapons, rareWeapons } from "../pdf/parsers/weaponPage";
 import { Armor, armorPage } from "../pdf/parsers/armorPage";
@@ -501,10 +501,10 @@ const parsePdf = async (pdfPath: string): Promise<[ParseResult[], () => Promise<
 							return {
 								type: "success" as const,
 								page: pageNum,
-								results: flatMap<{ name: string } | [string, { name: string }[]], { name: string }>(
-									successes[0].result[0],
-									(v) => ("name" in v ? [v] : v[1]),
-								),
+								results: successes[0].result[0].flatMap<
+									{ name: string } | [string, { name: string }[]],
+									{ name: string }
+								>((v) => ("name" in v ? [v] : v[1])),
 								save: async (imagePath: string) =>
 									await save(successes[0].result[0], pageNum, folders, imagePath),
 							};
