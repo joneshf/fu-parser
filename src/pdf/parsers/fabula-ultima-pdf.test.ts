@@ -26,16 +26,29 @@ const pageContentName: Record<PageContent, string> = {
 
 describe("parses pages", () => {
 	const pageContent: Map<number, PageContent> = pdf["Core Rulebook"];
-	for (const [page, content] of pageContent) {
+	type PageContentWithName = {
+		content: PageContent;
+		name: string;
+		page: number;
+	};
+	const pageContentWithName: PageContentWithName[] = [...pageContent].map(
+		([page, content]: [number, PageContent]): PageContentWithName => {
+			return {
+				content,
+				name: pageContentName[content],
+				page,
+			};
+		},
+	);
+	test.each(pageContentWithName)(`$page - $name`, async (pageContentWithName: PageContentWithName): Promise<void> => {
+		const content: PageContent = pageContentWithName.content;
+		const page: number = pageContentWithName.page;
 		const f: Parser<PageContentType[typeof content][]> = pageContentParser[content];
-		const name: string = pageContentName[content];
-		test(`${page} - ${name}`, async () => {
-			await withPage(page, async (d) => {
-				const successful = f([d, 0]).filter(isResult);
-				expect(successful.length).toBe(1);
-			});
+		await withPage(page, async (d) => {
+			const successful = f([d, 0]).filter(isResult);
+			expect(successful.length).toBe(1);
 		});
-	}
+	});
 
 	// test("current", async () => {
 	// 	await withPage(350, async (d) => {
