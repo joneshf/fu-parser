@@ -9,7 +9,7 @@ import { Beast } from "../pdf/parsers/beastiaryPage";
 import { StringToken, Token } from "../pdf/lexers/token";
 import { tokenizePDF } from "../pdf/lexers/pdf";
 import { ATTR, FUActor, FUItem, getFolder, saveImage } from "../external/project-fu";
-import { PageContent, PageContentType, pageContentParser, pdf } from "../pdf/parsers/fabula-ultima-pdf";
+import { PDFName, PageContent, PageContentType, pageContentParser, pdf } from "../pdf/parsers/fabula-ultima-pdf";
 
 // Relative url that foundry serves for the compiled webworker
 pdfjsLib.GlobalWorkerOptions.workerSrc = "modules/fu-parser/pdf.worker.js";
@@ -498,8 +498,8 @@ type ParseResult = { page: number } & (
 
 const pr = (z: string | StringToken) => (typeof z === "string" ? z : `<Text str="${z.string}" font="${z.font}">`);
 
-const parsePdf = async (pdfPath: string): Promise<[ParseResult[], () => Promise<void>]> => {
-	const pageContent: Map<number, PageContent> = pdf["Core Rulebook"];
+const parsePdf = async (pdfName: PDFName, pdfPath: string): Promise<[ParseResult[], () => Promise<void>]> => {
+	const pageContent: Map<number, PageContent> = pdf[pdfName];
 	const [withPage, destroy] = await tokenizePDF({
 		url: pdfPath,
 	});
@@ -558,7 +558,12 @@ const parsePdf = async (pdfPath: string): Promise<[ParseResult[], () => Promise<
 	];
 };
 
-type ImportPDFSubmissionData = { pdfPath: string; imagePath: string };
+type ImportPDFSubmissionData = {
+	imagePath: string;
+	pdfName: PDFName;
+	pdfNames: Record<PDFName, PDFName>;
+	pdfPath: string;
+};
 
 type ImportPDFData = ImportPDFSubmissionData & {
 	parseResults: ParseResult[];
@@ -571,11 +576,12 @@ export class ImportPDFApplication extends FormApplication<ImportPDFData> {
 		if (data.imagePath != this.object.imagePath) {
 			this.object.imagePath = data.imagePath;
 		}
-		if (data.pdfPath != this.object.pdfPath) {
+		if (data.pdfName !== this.object.pdfName || data.pdfPath != this.object.pdfPath) {
 			this.cleanupPDFResources();
+			this.object.pdfName = data.pdfName;
 			this.object.pdfPath = data.pdfPath;
 			this.render();
-			const [results, destroy] = await parsePdf(this.object.pdfPath);
+			const [results, destroy] = await parsePdf(this.object.pdfName, this.object.pdfPath);
 			this.object.parseResults = results;
 			this.object.destroy = destroy;
 		}
