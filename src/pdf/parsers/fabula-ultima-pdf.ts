@@ -32,7 +32,7 @@ export type PageContentType = {
 	"Rare Weapon": Weapon;
 };
 
-export const pageContent: Map<number, PageContent> = new Map([
+const coreRulebookPageContent: Map<number, PageContent> = new Map([
 	[106, "Consumable"],
 	[132, "Basic Weapon"],
 	[133, "Basic Weapon"],
@@ -98,4 +98,12 @@ export const pageContentParser: {
 	"Rare Armor": armorPage,
 	"Rare Shield": shieldPage,
 	"Rare Weapon": rareWeapons,
+};
+
+export type PDFName = (typeof PDF_NAME)[number];
+
+const PDF_NAME = ["Core Rulebook"] as const;
+
+export const pdf: Record<PDFName, Map<number, PageContent>> = {
+	"Core Rulebook": coreRulebookPageContent,
 };

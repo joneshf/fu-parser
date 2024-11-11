@@ -2,7 +2,7 @@ import { describe, expect, test } from "@jest/globals";
 import fs from "fs";
 import { tokenizePDF } from "../lexers/pdf";
 import { Parser, isResult } from "./lib";
-import { pageContent, PageContent, pageContentParser, PageContentType } from "./fabula-ultima-pdf";
+import { PageContent, pageContentParser, PageContentType, pdf } from "./fabula-ultima-pdf";
 
 const STANDARD_FONT_DATA_URL = "node_modules/pdfjs-dist/standard_fonts/";
 const FABULA_ULTIMA_PDF_PATH = "data/Fabula_Ultima_-_Core_Rulebook.pdf";
@@ -25,6 +25,7 @@ const pageContentName: Record<PageContent, string> = {
 };
 
 describe("parses pages", () => {
+	const pageContent: Map<number, PageContent> = pdf["Core Rulebook"];
 	for (const [page, content] of pageContent) {
 		const f: Parser<PageContentType[typeof content][]> = pageContentParser[content];
 		const name: string = pageContentName[content];

@@ -3,6 +3,8 @@
         <div style="flex: 0 1">
             <div>
                 <div style="display:grid; grid-template-columns: 75% 20%; grid-gap: 10px 5%">
+                    <div>PDF Type</div>
+                    <div><select name="pdfName">{{ selectOptions pdfNames selected=pdfName }}</select></div>
                     <div><input type="text" name="pdfPath" placeholder="Path to your pdf" value="{{pdfPath}}"/></div>
                     <div>{{ filePicker type="pdf" target="pdfPath"}}</div>
                     <div><input type="text" name="imagePath" placeholder="Path to save images" value="{{imagePath}}"/></div>
