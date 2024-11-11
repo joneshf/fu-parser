@@ -2,11 +2,11 @@ import * as pdfjsLib from "pdfjs-dist";
 import { Image, Token } from "./token";
 import { DocumentInitParameters } from "pdfjs-dist/types/src/display/api";
 
-export const tokenizePDF = async (
-	parameters: DocumentInitParameters,
-): Promise<
-	[<R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>, () => Promise<void>]
-> => {
+export type Destroy = () => Promise<void>;
+
+export type WithPDF = <R>(pageNum: number, f: (d: Token[]) => Promise<R>) => Promise<[R, () => boolean]>;
+
+export const tokenizePDF = async (parameters: DocumentInitParameters): Promise<[WithPDF, Destroy]> => {
 	parameters.cMapPacked ??= true;
 	if (typeof window !== "undefined" && window?.document != null) {
 		parameters.cMapUrl ??= `//cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/cmaps/`;

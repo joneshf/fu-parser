@@ -1,13 +1,13 @@
 import { describe, expect, test } from "@jest/globals";
 import fs from "fs";
-import { tokenizePDF } from "../lexers/pdf";
+import { Destroy, tokenizePDF, WithPDF } from "../lexers/pdf";
 import { Parser, isResult } from "./lib";
-import { PageContent, pageContentParser, PageContentType, pdf } from "./fabula-ultima-pdf";
+import { PageContent, pageContentParser, PageContentType, pdf, PDFName } from "./fabula-ultima-pdf";
 
 const STANDARD_FONT_DATA_URL = "node_modules/pdfjs-dist/standard_fonts/";
 const FABULA_ULTIMA_PDF_PATH = "data/Fabula_Ultima_-_Core_Rulebook.pdf";
 
-const [withPage, destroy] = await tokenizePDF({
+const tokenizedCoreRulebook: [WithPDF, Destroy] = await tokenizePDF({
 	data: new Uint8Array(fs.readFileSync(FABULA_ULTIMA_PDF_PATH)),
 	standardFontDataUrl: STANDARD_FONT_DATA_URL,
 });
@@ -24,8 +24,19 @@ const pageContentName: Record<PageContent, string> = {
 	"Rare Weapon": "Weapons - Rare",
 };
 
-describe("parses pages", () => {
-	const pageContent: Map<number, PageContent> = pdf["Core Rulebook"];
+type DescribePDF = {
+	name: PDFName;
+	tokenized: [WithPDF, Destroy];
+};
+
+describe.each<DescribePDF>([
+	{
+		name: "Core Rulebook",
+		tokenized: tokenizedCoreRulebook,
+	},
+])("parses pages for $name", (describePDF: DescribePDF): void => {
+	const [withPage, destroy]: [WithPDF, Destroy] = describePDF.tokenized;
+	const pageContent: Map<number, PageContent> = pdf[describePDF.name];
 	type PageContentWithName = {
 		content: PageContent;
 		name: string;
