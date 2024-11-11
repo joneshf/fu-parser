@@ -9,7 +9,7 @@ import { Beast } from "../pdf/parsers/beastiaryPage";
 import { StringToken, Token } from "../pdf/lexers/token";
 import { tokenizePDF } from "../pdf/lexers/pdf";
 import { ATTR, FUActor, FUItem, getFolder, saveImage } from "../external/project-fu";
-import { PageContent, PageContentType, pageContent, pageContentParser } from "../pdf/parsers/fabula-ultima-pdf";
+import { PageContent, PageContentType, pageContentParser, pdf } from "../pdf/parsers/fabula-ultima-pdf";
 
 // Relative url that foundry serves for the compiled webworker
 pdfjsLib.GlobalWorkerOptions.workerSrc = "modules/fu-parser/pdf.worker.js";
@@ -499,6 +499,7 @@ type ParseResult = { page: number } & (
 const pr = (z: string | StringToken) => (typeof z === "string" ? z : `<Text str="${z.string}" font="${z.font}">`);
 
 const parsePdf = async (pdfPath: string): Promise<[ParseResult[], () => Promise<void>]> => {
+	const pageContent: Map<number, PageContent> = pdf["Core Rulebook"];
 	const [withPage, destroy] = await tokenizePDF({
 		url: pdfPath,
 	});
